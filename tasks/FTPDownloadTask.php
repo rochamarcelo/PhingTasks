@@ -185,7 +185,7 @@ class FtpDownloadTask extends Task
                 array($ds, $ds),
                 $localFile
             );
-            $saveDir = substr($localFile, 0, strrpos($localFile, $dir));
+            $saveDir = substr($localFile, 0, strrpos($localFile, $ds));
             if ( !empty($saveDir) && !is_dir($saveDir) ) {
                 mkdir($saveDir, 0777, true);
             }
