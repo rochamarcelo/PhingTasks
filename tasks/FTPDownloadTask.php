@@ -6,7 +6,7 @@ require_once 'phing/Task.php';
 /**
  * Download a list of files from the FTP server
  *
- * @package phing.tasks.ext.ftp
+ * @package phing.tasks.ftp
  * @author  Marcelo Rocha <contato@omarcelo.com.br>
  */
 class FtpDownloadTask extends Task
@@ -40,13 +40,13 @@ class FtpDownloadTask extends Task
      *
      * @var string
      */
-    protected $remotedir;
+    protected $dir;
     /**
      * The local base dir [Optional]
      *
      * @var string
      */
-    protected $localDir;
+    protected $localDir = '';
 
     /**
      * The transfer mode. Must be either FTP_ASCII or FTP_BINARY.
@@ -65,6 +65,14 @@ class FtpDownloadTask extends Task
      */
     protected $logLevel = Project::MSG_VERBOSE;
 
+    /**
+     * Any filelists of files that should be appended.
+     *
+     * @var array
+     */
+    protected $filelists = array();
+
+    private $_project;
 
     /**
      * The main entry point
@@ -74,6 +82,130 @@ class FtpDownloadTask extends Task
      */
     public function main()
     {
+        $this->_project = $this->getProject();
+
+        $connection = ftp_connect($this->host, $this->port);
+
+        if ( !$connection ) {
+            throw new BuildException('Could not connect to FTP server '.$this->host.' on port '.$this->port);
+        }
+        $this->log(
+            'Connected to FTP server ' . $this->host . ' on port ' . $this->port,
+            $this->logLevel
+        );
+
+        //Login on ftp server
+        if ( !ftp_login($connection, $this->username, $this->password) ) {
+            ftp_close($connection);
+            throw new BuildException(
+                'Could not login to FTP server ' . $this->host . ' on port ' . $this->port . ' with username ' . $this->username
+            );
+        }
+        $this->log(
+            'Logged in to FTP server with username ' . $this->username,
+            $this->logLevel
+        );
+        //Turn on the pssive mode
+        if ($this->passive) {
+            $this->log('Setting passive mode', $this->logLevel);
+            if ( !ftp_pasv($connection, true) ) {
+                ftp_close($connection);
+                throw new BuildException('Could not set PASSIVE mode');
+            }
+        }
+
+        // append '/' to the end if necessary
+        $dir = substr($this->dir, -1) == '/' ? $this->dir : $this->dir.'/';
+
+        //Change dir
+        if ( !ftp_chdir($connection, $dir) ) {
+            throw new BuildException('Could not change to directory ' . $dir);
+        }
+        $this->log('Changed directory ' . $dir, $this->logLevel);
+
+        //Get files
+        $this->_downloadFiles($connection);
+
+        //Disconect
+        ftp_close($connection);
+        $this->log('Disconnected from FTP server', $this->logLevel);
+    }
+
+    /**
+     * Download files from ftp server
+     *
+     * @param resource $connection Ftp connection
+     *
+     * @access private
+     * @return self
+     */
+    private function _downloadFiles($connection)
+    {
+        // append the files in the filelists
+        foreach($this->filelists as $fl) {
+            try {
+                $this->_downloadFileList($connection, $fl);
+            } catch (BuildException $e) {
+                $this->log($e->getMessage(), Project::MSG_WARN);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Download files from ftp server defined in a file list
+     *
+     * @param resource $connection Ftp connection
+     * @param FileList $fl         A File list to download
+     *
+     * @access private
+     * @return self
+     */
+    private function _downloadFileList($connection, $fl)
+    {
+        $ds = DIRECTORY_SEPARATOR;
+        $dir = $fl->getDir($this->project);
+        if ( $dir !== null ) {
+            $dir = $dir->getPath();
+            if ( substr($dir, -1)  != '/' ) {
+                $dir = $dir . '/';
+            }
+            //Change dir
+            if ( !ftp_chdir($connection, $dir) ) {
+                throw new BuildException('Could not change to directory ' . $dir);
+            }
+            $this->log('Changed directory ' . $dir, $this->logLevel);
+        }
+        $files = $fl->getFiles($this->project);
+
+        foreach ($files as $file) {
+            $localFile = $this->localDir . $file;
+            $localFile = str_replace(
+                array('/', '\\'),
+                array($ds, $ds),
+                $localFile
+            );
+            $saveDir = substr($localFile, 0, strrpos($localFile, $dir));
+            if ( !empty($saveDir) && !is_dir($saveDir) ) {
+                mkdir($saveDir, 0777, true);
+            }
+
+            if (!@ftp_get($connection, $localFile, $file, $this->mode)) {
+                $this->log("Could not download file $file from FTP server", $this->logLevel);
+            } else {
+                $this->log("Downloaded file $file from FTP server", $this->logLevel);
+            }
+        }
+    }
+
+    /**
+     * Supports embedded <filelist> element.
+     *
+     * @return FileList
+     */
+    public function createFileList() {
+        $num = array_push($this->filelists, new FileList());
+        return $this->filelists[$num-1];
     }
 
 
@@ -178,21 +310,21 @@ class FtpDownloadTask extends Task
      *
      * @return string
      */
-    public function getRemotedir()
+    public function getDir()
     {
-        return $this->remotedir;
+        return $this->dir;
     }
 
     /**
      * Sets the The base dir on FTP Server [Optional].
      *
-     * @param string $remotedir the remotedir
+     * @param string $dir the dir
      *
      * @return self
      */
-    public function setRemotedir($remotedir)
+    public function setDir($dir)
     {
-        $this->remotedir = (string)$remotedir;
+        $this->dir = (string)$dir;
 
         return $this;
     }
@@ -216,7 +348,11 @@ class FtpDownloadTask extends Task
      */
     public function setLocalDir($localDir)
     {
-        $this->localDir = (string)$localDir;
+        $localDir = (string)$localDir;
+        if ( substr($localDir, -1) != DIRECTORY_SEPARATOR ) {
+            $localDir .= DIRECTORY_SEPARATOR;
+        }
+        $this->localDir = $localDir;
 
         return $this;
     }
@@ -301,7 +437,7 @@ class FtpDownloadTask extends Task
      */
     public function setLogLevel($logLevel)
     {
-        switch (strtolower($level)) {
+        switch (strtolower($logLevel)) {
         case "error":
             $this->logLevel = Project::MSG_ERR;
             break;
