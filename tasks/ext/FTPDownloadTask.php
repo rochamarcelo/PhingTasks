@@ -72,7 +72,23 @@ class FtpDownloadTask extends Task
      */
     protected $filelists = array();
 
+    protected $propertyName = 'ftp.download.totalSuccess';
+
     private $_project;
+
+    /**
+     * Total of files downloaded
+     *
+     * @var integer
+     */
+    private $_totalSuccess = 0;
+
+    /**
+     * "Cache" results of fpt_nlist
+     *
+     * @var array
+     */
+    private $_cacheNlist = array();
 
     /**
      * The main entry point
@@ -82,6 +98,7 @@ class FtpDownloadTask extends Task
      */
     public function main()
     {
+        $this->_totalSuccess = 0;
         $this->_project = $this->getProject();
 
         $connection = ftp_connect($this->host, $this->port);
@@ -124,8 +141,9 @@ class FtpDownloadTask extends Task
         $this->log('Changed directory ' . $dir, $this->logLevel);
 
         //Get files
+        $this->_cacheNlist = array();
         $this->_downloadFiles($connection);
-
+        $this->project->setProperty($this->getPropertyName(), $this->_totalSuccess);
         //Disconect
         ftp_close($connection);
         $this->log('Disconnected from FTP server', $this->logLevel);
@@ -179,6 +197,10 @@ class FtpDownloadTask extends Task
         $files = $fl->getFiles($this->project);
 
         foreach ($files as $file) {
+            if ( !$this->_checkRemoteFileExists($connection, $file) ) {
+                $this->log("The file '$file' does not exists", $this->logLevel);
+                continue;
+            }
             $localFile = $this->localDir . $file;
             $localFile = str_replace(
                 array('/', '\\'),
@@ -191,11 +213,76 @@ class FtpDownloadTask extends Task
             }
 
             if (!@ftp_get($connection, $localFile, $file, $this->mode)) {
-                $this->log("Could not download file $file from FTP server", $this->logLevel);
+                throw new BuildException("Could not download file '$file' from FTP server");
             } else {
+                $this->_totalSuccess++;
                 $this->log("Downloaded file $file from FTP server", $this->logLevel);
             }
         }
+    }
+
+    /**
+     * Check remote file exists
+     *
+     * @param resource $connection Ftp connection
+     * @param string   $file       File path
+     *
+     * @access private
+     * @return self
+     */
+    private function _checkRemoteFileExists($connection, $file)
+    {
+        $ds = DIRECTORY_SEPARATOR;
+        $origin = ftp_pwd($connection);
+        $pos = strrpos($file, $ds);
+        $dir = null;
+        if ( $pos !== false ) {
+            $dir = substr($file, 0, $pos);
+            $file = substr($file, $pos+1);
+        }
+
+        $list = $this->_getListFilesFTP($connection, $dir);
+
+        if ( empty($list) ) {
+            return false;
+        }
+
+        return in_array($file, $list, true);
+    }
+
+    /**
+     * Gets a list of files in the given remote directory
+     *
+     * @param resource $connection Ftp connection
+     * @param string   $dir        Remote directory
+     * @param boolean  $useCache   Should use "cached" nlist result[Defaults true]
+     *
+     * @access private
+     * @return array
+     */
+    private function _getListFilesFTP($connection, $dir, $useCache = true)
+    {
+        if ( empty($dir) ) {
+            $dir = ftp_pwd($connection);
+        }
+        if ( $useCache === true && isset($this->_cacheNlist[$dir]) ) {
+            return $this->_cacheNlist[$dir];
+        }
+
+        $origin = ftp_pwd($connection);
+        $changed = @ftp_chdir($connection, $dir);
+        @ftp_chdir($connection, $origin);
+        if ( !$changed ) {
+            return array();
+        }
+
+        $list = ftp_nlist($connection, $dir);
+        if ( is_array($list) ) {
+            $this->_cacheNlist[$dir] = $list;
+        } else {
+            $list = array();
+        }
+        return $list;
     }
 
     /**
@@ -456,6 +543,30 @@ class FtpDownloadTask extends Task
         default:
             throw new BuildException('Invalid log level');
         }
+
+        return $this;
+    }
+
+    /**
+     * Gets the value of propertyName.
+     *
+     * @return mixed
+     */
+    public function getPropertyName()
+    {
+        return $this->propertyName;
+    }
+
+    /**
+     * Sets the value of propertyName.
+     *
+     * @param mixed $propertyName the property name
+     *
+     * @return self
+     */
+    public function setPropertyName($propertyName)
+    {
+        $this->propertyName = (string)$propertyName;
 
         return $this;
     }
