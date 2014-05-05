@@ -102,7 +102,7 @@ class DeployLogTask extends Task
             $tmp = tempnam(sys_get_temp_dir(), 'xls_log');
             $writer->save($tmp);
             $this->log("Saved temporary file '$tmp'", Project::MSG_VERBOSE);
-            $renamed = copy($tmp, $this->file);
+            $renamed = rename($tmp, $this->file);
             if ( !$renamed ) {
                 throw new Exception;
             }
