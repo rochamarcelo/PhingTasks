@@ -43,8 +43,11 @@ Exemplos
     </target>
 </project>
 ```
-Agora execute:
-        $ vendor/bin/phing
+
+Agora execute o phing: 
+
+            $ vendor/bin/phing
+
 2. **SvnChangedFilesTask**
 No seu projeto copie o conteudo abaixo no arquivo build.xml:
 ```xml
@@ -71,5 +74,7 @@ No seu projeto copie o conteudo abaixo no arquivo build.xml:
     </target>
 </project>
 ```
-Agora execute:
-        $ vendor/bin/phing
+
+Agora execute o phing: 
+
+            $ vendor/bin/phing
