@@ -26,10 +26,18 @@ class SvnChangedFilesTask extends SvnBaseTask
     protected $forceRelativePath = false;
 
     /**
+     * the property name to store the changed(modified or added) files
      *
      * @var string
      */
-    protected $propertyName = "ftp.changedfiles";
+    protected $propertyNameChanged = "svn.changed";
+
+    /**
+     * the property name to store the deleted files
+     *
+     * @var string
+     */
+    protected $propertyNameDeleted = 'svn.deleted';
 
     /**
      * The main entry point
@@ -65,21 +73,24 @@ class SvnChangedFilesTask extends SvnBaseTask
         if ( !isset($xml->paths->path) ) {
             return;
         }
-        $list = array();
+        $changed = $deleted = array();
         foreach ( $xml->paths->path as $path ) {
-            if ( (string)$path["item"] == 'deleted' ) {
-                continue;
-            }
             $file = (string)$path;
 
             if ( $this->forceRelativePath ) {
                 $file = str_replace($repositoryPath, '', $file);
             }
-
-            $list[] = $file;
+            if ( (string)$path["item"] != 'deleted' ) {
+                $changed[] = $file;
+            } else {
+                $deleted[] = $file;
+            }
         }
-        $list = implode(',', $list);
-        $this->project->setProperty($this->getPropertyName(), $list);
+
+        $changed = implode(',', $changed);
+        $deleted = implode(',', $deleted);
+        $this->project->setProperty($this->getPropertyNameChanged(), $changed);
+        $this->project->setProperty($this->getPropertyNameDeleted(), $deleted);
     }
 
     /**
@@ -114,25 +125,50 @@ class SvnChangedFilesTask extends SvnBaseTask
     }
 
     /**
-     * Sets the name of the property to set the list of files changed
+     * Sets the the property name to store the changed(modified or added) files.
      *
-     * @param string $propertyName The property name
+     * @param string $propertyNameChanged the property name changed
      *
-     * @access public
+     * @return self
      */
-    public function setPropertyName($propertyName)
+    public function setPropertyNameChanged($propertyNameChanged)
     {
-        $this->propertyName = (string)$propertyName;
+        $this->propertyNameChanged = (string)$propertyNameChanged;
+
+        return $this;
     }
 
     /**
-     * Get the name of the property used to set a list of files changed
+     * Gets the the property name to store the changed(modified or added) files.
      *
-     * @access public
      * @return string
      */
-    public function getPropertyName()
+    public function getPropertyNameChanged()
     {
-        return $this->propertyName;
+        return $this->propertyNameChanged;
+    }
+
+    /**
+     * Sets the the property name to store the deleted files.
+     *
+     * @param string $propertyNameDeleted the property name deleted
+     *
+     * @return self
+     */
+    public function setPropertyNameDeleted($propertyNameDeleted)
+    {
+        $this->propertyNameDeleted = $propertyNameDeleted;
+
+        return $this;
+    }
+
+    /**
+     * Gets the the property name to store the deleted files.
+     *
+     * @return string
+     */
+    public function getPropertyNameDeleted()
+    {
+        return $this->propertyNameDeleted;
     }
 }
