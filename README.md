@@ -62,7 +62,7 @@ Agora execute o phing:
 
 2. **SvnChangedFilesTask**
 
-No seu projeto copie o conteudo abaixo no arquivo build.xml:
+Crie o arquivo build.xml:
 
 
 ```xml
