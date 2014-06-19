@@ -17,7 +17,19 @@ Via composer:
 Exemplos
 ------------
  1. **FTPDownloadTask**
- No seu projeto crie o arquivo config/project.properties com as configurações do servidor FTP e então copie o conteudo abaixo no arquivo build.xml:
+
+No seu projeto crie o arquivo config/project.properties com as configurações do servidor FTP:
+``` 
+         ftp.host=yourhost.com.br
+         ftp.port=21
+         ftp.username=yourusername
+         ftp.password=yourpassword
+         ftp.dir=/
+         ftp.mode=binary
+         ftp.passive=true
+``` 
+Crie o arquivo build.xml:
+
 ```xml
  <?xml version="1.0" encoding="UTF-8" ?>
 <project name="FtpDownload" default="example">
@@ -46,10 +58,13 @@ Exemplos
 
 Agora execute o phing: 
 
-            $ vendor/bin/phing
+$ vendor/bin/phing
 
 2. **SvnChangedFilesTask**
+
 No seu projeto copie o conteudo abaixo no arquivo build.xml:
+
+
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
 <project name="SvnChangedFiles" default="example">
@@ -75,6 +90,6 @@ No seu projeto copie o conteudo abaixo no arquivo build.xml:
 </project>
 ```
 
-Agora execute o phing: 
+Agora execute o phing:
 
-            $ vendor/bin/phing
+$ vendor/bin/phing
