@@ -12,5 +12,8 @@
     "require": {
         "php": ">=5.3.0",
         "phing/phing": "dev-master"
+    },
+    "autoload": {
+        "classmap": ["."]
     }
 }
