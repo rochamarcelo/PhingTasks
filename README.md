@@ -58,7 +58,7 @@ Crie o arquivo build.xml:
 
 Agora execute o phing: 
 
-$ vendor/bin/phing
+         $ vendor/bin/phing
 
 2. **SvnChangedFilesTask**
 
@@ -92,4 +92,4 @@ No seu projeto copie o conteudo abaixo no arquivo build.xml:
 
 Agora execute o phing:
 
-$ vendor/bin/phing
+         $ vendor/bin/phing
