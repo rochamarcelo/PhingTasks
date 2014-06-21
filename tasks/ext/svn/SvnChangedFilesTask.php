@@ -60,22 +60,21 @@ class SvnChangedFilesTask extends SvnBaseTask
         // revision range
         $switches = array(
             'r' => $this->revisionRange,
-            'summarize' => true,
+            'summarize' => true
         );
 
         $output = $this->run(array(), $switches);
-        $xml = @simplexml_load_string($output);
 
-        if ( !$xml || !isset($xml->paths) ) {
-            throw new BuildException("Failed to parse the output of 'svn diff --xml'.");
+        if ( !is_array($output) || !isset($output['path']) ) {
+            throw new BuildException("Failed to parse the output of 'svn diff'.");
         }
 
-        if ( !isset($xml->paths->path) ) {
+        if ( empty($output['path']) ) {
             return;
         }
         $changed = $deleted = array();
-        foreach ( $xml->paths->path as $path ) {
-            $file = (string)$path;
+        foreach ( $output['path'] as $path ) {
+            $file = (string)$path['text'];
 
             if ( $this->forceRelativePath ) {
                 $file = str_replace($repositoryPath, '', $file);
