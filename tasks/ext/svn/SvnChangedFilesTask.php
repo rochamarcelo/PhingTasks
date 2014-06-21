@@ -65,7 +65,7 @@ class SvnChangedFilesTask extends SvnBaseTask
 
         $output = $this->run(array(), $switches);
 
-        if ( !is_array($output) || !isset($output['path']) ) {
+        if ( !is_array($output) || (!empty($output) && !isset($output['path'])) ) {
             throw new BuildException("Failed to parse the output of 'svn diff'.");
         }
 
