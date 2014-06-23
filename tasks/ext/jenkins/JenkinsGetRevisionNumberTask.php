@@ -6,7 +6,7 @@ require_once 'phing/Task.php';
 /**
  * Get the revision number of a jenkins revision.txt file
  *
- * @package phing.tasks.ext.svn
+ * @package phing.tasks.ext.jenkins
  * @author  Marcelo Rocha <contato@omarcelo.com.br>
  */
 class JenkinsGetRevisionNumberTask extends Task
