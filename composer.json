@@ -3,6 +3,7 @@
     "description": "Some useful phing tasks",
     "keywords": ["phing", "task", "svn", "deploy"],
     "homepage": "https://github.com/rochamarcelo/PhingTasks/",
+    "license": "MIT",
     "authors": [
         {
             "name": "Marcelo Rocha",
