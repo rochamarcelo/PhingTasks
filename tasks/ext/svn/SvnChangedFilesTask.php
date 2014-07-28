@@ -82,6 +82,26 @@ class SvnChangedFilesTask extends SvnBaseTask
 
         $changed = $deleted = array();
         $this->log('Copying files to ' . $toDir);
+        if ( !file_exists($toDir) && !mkdir($toDir, 0666, true) ) {
+            // throw new BuildException("Failed to create the directory $toDir");
+        }
+
+        $txtChanged = fopen($toDir . 'changed.txt', 'w');
+
+        if ( !$txtChanged ) {
+            throw new BuildException("Failed to open '$toDir.changed.txt'");
+        }
+
+        $txtDeleted = fopen($toDir . 'deleted.txt', 'w');
+        if ( !$txtDeleted ) {
+            throw new BuildException("Failed to open '$toDir.deleted.txt'");
+        }
+
+        $txtAll = fopen($toDir . 'all.txt', 'w');
+        if ( !$txtAll ) {
+            throw new BuildException("Failed to open '$toDir.all.txt'");
+        }
+
         foreach ( $output['path'] as $path ) {
             $file = (string)$path['text'];
             $original = $file;
@@ -89,14 +109,20 @@ class SvnChangedFilesTask extends SvnBaseTask
                 $file = str_replace($repositoryPath, '', $file);
                 $file  = ltrim($file, '/ \\');
             }
+
             if ( (string)$path["item"] != 'deleted' ) {
                 $changed[] = $file;
-                $this->copy($original, $toDir . $file);
+                $this->copy($original, $toDir . 'changed/' . $file);
+                fwrite($txtChanged, $file . "\n");
             } else {
+                fwrite($txtDeleted, $file . "\n");
                 $deleted[] = $file;
             }
+            fwrite($txtAll, $file . "\n");
         }
-
+        fclose($txtChanged);
+        fclose($txtDeleted);
+        fclose($txtAll);
         $changed = implode(',', $changed);
         $deleted = implode(',', $deleted);
         $this->project->setProperty($this->getPropertyNameChanged(), $changed);
