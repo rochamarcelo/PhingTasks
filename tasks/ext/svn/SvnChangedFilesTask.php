@@ -47,17 +47,18 @@ class SvnChangedFilesTask extends SvnBaseTask
      */
     function main()
     {
-        $toDir = $this->getToDir();
-        if ( empty(trim($toDir)) ) {
-            $toDir = '.';
+        $toDir = trim($this->getToDir());
+        if ( empty($toDir) ) {
+            $toDir = 'SvnChangedFiles';
         }
-        $toDir .= '/';
+        $toDir .= DIRECTORY_SEPARATOR;
 
         $this->setup('diff');
         $repositoryPath = $this->getRepositoryUrl();
         if ( empty($repositoryPath) ) {
             $repositoryPath = $this->getWorkingCopy();
         }
+        $repositoryPath = rtrim($repositoryPath, '//');
 
         $message = "Finding changed files at SVN repository '";
         $message .= $repositoryPath . "' (range: {$this->revisionRange})";
@@ -80,11 +81,13 @@ class SvnChangedFilesTask extends SvnBaseTask
         }
 
         $changed = $deleted = array();
+        $this->log('Copying files to ' . $toDir);
         foreach ( $output['path'] as $path ) {
             $file = (string)$path['text'];
             $original = $file;
             if ( $this->forceRelativePath ) {
                 $file = str_replace($repositoryPath, '', $file);
+                $file  = ltrim($file, '/ \\');
             }
             if ( (string)$path["item"] != 'deleted' ) {
                 $changed[] = $file;
@@ -114,9 +117,10 @@ class SvnChangedFilesTask extends SvnBaseTask
         if ( !file_exists($dir) && !mkdir($dir, 0666, true) ) {
             throw new BuildException("Failed to create the directory $dir");
         }
+
         //dir
         if ( is_dir($source) ) {
-            if ( !mkdir($dest, 0666, true) ) {
+            if ( !file_exists($dest) && !mkdir($dest, 0666, true) ) {
                 throw new BuildException("Failed to create the directory $dest");
             }
             return;
