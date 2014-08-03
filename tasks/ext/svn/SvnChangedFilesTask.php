@@ -71,10 +71,7 @@ class SvnChangedFilesTask extends SvnBaseTask
         );
 
         $output = $this->run(array(), $switches);
-
-        if ( !is_array($output) || (!empty($output) && !isset($output['path'])) ) {
-            throw new BuildException("Failed to parse the output of 'svn diff'.");
-        }
+        $this->parseOutput($output);
 
         if ( empty($output['path']) ) {
             return;
@@ -83,7 +80,7 @@ class SvnChangedFilesTask extends SvnBaseTask
         $changed = $deleted = array();
         $this->log('Copying files to ' . $toDir);
         if ( !file_exists($toDir) && !mkdir($toDir, 0666, true) ) {
-            // throw new BuildException("Failed to create the directory $toDir");
+            throw new BuildException("Failed to create the directory $toDir");
         }
 
         $txtChanged = fopen($toDir . 'changed.txt', 'w');
@@ -127,6 +124,42 @@ class SvnChangedFilesTask extends SvnBaseTask
         $deleted = implode(',', $deleted);
         $this->project->setProperty($this->getPropertyNameChanged(), $changed);
         $this->project->setProperty($this->getPropertyNameDeleted(), $deleted);
+    }
+
+    /**
+     * Parse output to array
+     *
+     * @param array &$output Svn diff output
+     *
+     * @return null
+     */
+    protected function parseOutput(&$output)
+    {
+        if ( is_array($output) ) {
+            if ( !array_key_exists('path', $output) ) {
+                $output['path'] = array();
+            }
+            return;
+        }
+
+        if ( !is_string($output) ) {
+            return;
+        }
+        $xml = @simplexml_load_string($output);
+        $output = array('path' => array());
+        if ( !isset($xml->paths->path) ) {
+            return;
+        }
+
+        foreach ( $xml->paths->path as $path ) {
+            $attr = $path->attributes();
+            $output['path'][] = array(
+                'text' => (string)$path,
+                'props' => (string)$attr->props,
+                'item' => (string)$attr->item,
+                'kind' => (string)$attr->kind
+            );
+        }
     }
 
     /**
